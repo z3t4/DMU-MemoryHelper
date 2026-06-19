@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>FF14 Memory</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:    #0b0b18;
+      --panel: #14142a;
+      --border:#2e2e50;
+      --gold:  #c8a96e;
+      --muted: #6b6890;
+      --text:  #d4cce8;
+    }
+
+    html { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 6px 10px 8px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      flex-shrink: 0;
+      text-align: center;
+      color: var(--gold);
+      font-size: clamp(0.8rem, 2.5dvh, 1.1rem);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    /* ── Panels ── */
+    .phase {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px 12px 5px;
+      flex-shrink: 0;
+    }
+
+    /* P2 fixed height — calibrated to match ~1 P4 row height */
+    .phase.p2 {
+      flex: 0 0 clamp(72px, 13dvh, 108px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* P4 fills remaining vertical space */
+    .phase.p4 {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .phase-title {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--gold);
+      font-size: clamp(0.6rem, 1.6dvh, 0.72rem);
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+    }
+
+    .vis-btn {
+      font-size: clamp(0.58rem, 1.4dvh, 0.68rem);
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+      padding: 2px 7px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .vis-btn.active {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .row.hidden { display: none; }
+
+    /* ── Rows ── */
+    .row {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    /* P2 row fills the panel like P4 rows */
+    .p2 .row { flex: 1; min-height: 0; }
+
+    /* P4 rows share remaining height equally */
+    .p4 .row {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .label-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .label {
+      font-size: clamp(0.78rem, 1.9dvh, 1rem);
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    /* ── Result badge (Feu / Eau) ── */
+    .result-badge {
+      margin-top: 2px;
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 5px;
+      font-size: clamp(0.58rem, 1.5dvh, 0.78rem);
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.15s;
+      align-self: flex-start;
+    }
+    .result-badge.visible { opacity: 1; }
+    .result-badge.twister { background:#2d1a00; border:1px solid #e67e22; color:#f39c12; }
+    .result-badge.donut   { background:#1a002d; border:1px solid #8e44ad; color:#bb8fce; }
+    .result-badge.still   { background:#001a2a; border:1px solid #5dade2; color:#85c1e9; }
+    .result-badge.move    { background:#1a2800; border:1px solid #58d68d; color:#58d68d; }
+
+    /* ── Button groups ── */
+    .btn-group {
+      display: flex;
+      flex-shrink: 0;
+      gap: 5px;
+      width: clamp(148px, 46vw, 220px);
+      align-self: stretch;
+    }
+
+    .pair-btn {
+      flex: 1;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: clamp(0.82rem, 2dvh, 1.05rem);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      line-height: 1;
+    }
+
+    /* Active states */
+    .pair-btn.active-true  { background:#0d2e18; border-color:#2ecc71; color:#2ecc71; }
+    .pair-btn.active-false { background:#2e0d0d; border-color:#e74c3c; color:#e74c3c; }
+    .pair-btn.active-cone  { background:#1e0d3a; border-color:#9b59b6; color:#d2a8e8; }
+    .pair-btn.active-round { background:#0d1e3a; border-color:#3498db; color:#85c1e9; }
+    .pair-btn.active-still { background:#001a2a; border-color:#5dade2; color:#85c1e9; }
+    .pair-btn.active-move  { background:#1a2800; border-color:#58d68d; color:#58d68d; }
+    .pair-btn.active-short { background:#1a1a00; border-color:#f1c40f; color:#f4d03f; }
+    .pair-btn.active-long  { background:#1a0a00; border-color:#e67e22; color:#f0a500; }
+
+    /* ── Reset ── */
+    .reset-btn {
+      flex-shrink: 0;
+      width: 100%;
+      padding: clamp(9px, 1.8dvh, 16px);
+      background: #1e0808;
+      border: 2px solid #6b2020;
+      border-radius: 12px;
+      color: #e74c3c;
+      font-size: clamp(0.82rem, 1.9dvh, 1rem);
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .reset-btn:active { background:#6b2020; border-color:#e74c3c; color:#fff; }
+  </style>
+</head>
+<body>
+
+<h1>⚔ FF14 Memory</h1>
+
+<!-- ── PHASE 2 ── -->
+<div class="phase p2">
+  <div class="phase-title">Phase 2</div>
+  <div class="row">
+    <div class="label-wrap"><div class="label">Shape</div></div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-cone"  onclick="selectShape('cone')">▲ Cone</button>
+      <button class="pair-btn" id="btn-round" onclick="selectShape('round')">● Round</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PHASE 4 ── -->
+<div class="phase p4">
+  <div class="phase-title">
+    Phase 4
+    <button class="vis-btn" id="btn-vis-extras" onclick="toggleExtras()">Still &amp; Spread</button>
+  </div>
+
+  <div class="row">
+    <div class="label-wrap"><div class="label">👁 Gaze 1</div></div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-gaze1-true"  onclick="select('gaze1', true)">True</button>
+      <button class="pair-btn" id="btn-gaze1-false" onclick="select('gaze1', false)">False</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label-wrap"><div class="label">👁 Gaze 2</div></div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-gaze2-true"  onclick="select('gaze2', true)">True</button>
+      <button class="pair-btn" id="btn-gaze2-false" onclick="select('gaze2', false)">False</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label-wrap">
+      <div class="label">🔥 Fire</div>
+      <div id="badge-feu" class="result-badge"></div>
+    </div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-feu-true"  onclick="select('feu', true)">True</button>
+      <button class="pair-btn" id="btn-feu-false" onclick="select('feu', false)">False</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label-wrap">
+      <div class="label">💧 Water</div>
+      <div id="badge-eau" class="result-badge"></div>
+    </div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-eau-true"  onclick="select('eau', true)">True</button>
+      <button class="pair-btn" id="btn-eau-false" onclick="select('eau', false)">False</button>
+    </div>
+  </div>
+
+  <div class="row" id="row-stillness">
+    <div class="label-wrap">
+      <div class="label">🧘 Stillness</div>
+      <div id="badge-stillness" class="result-badge"></div>
+    </div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-stillness-still" onclick="select('stillness', 'still')">Still</button>
+      <button class="pair-btn" id="btn-stillness-move"  onclick="select('stillness', 'move')">Move</button>
+    </div>
+  </div>
+
+  <div class="row" id="row-spread">
+    <div class="label-wrap"><div class="label">📏 Spread</div></div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-spread-short" onclick="select('spread', 'short')">Short</button>
+      <button class="pair-btn" id="btn-spread-long"  onclick="select('spread', 'long')">Long</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label-wrap"><div class="label">⚡ Thunder</div></div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-foudre-true"  onclick="select('foudre', true)">True</button>
+      <button class="pair-btn" id="btn-foudre-false" onclick="select('foudre', false)">False</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label-wrap"><div class="label">❄ Ice</div></div>
+    <div class="btn-group">
+      <button class="pair-btn" id="btn-glace-true"  onclick="select('glace', true)">True</button>
+      <button class="pair-btn" id="btn-glace-false" onclick="select('glace', false)">False</button>
+    </div>
+  </div>
+</div>
+
+<button class="reset-btn" onclick="resetAll()">✕ Reset all</button>
+
+<script>
+  const BOOL_KEYS = ['gaze1', 'gaze2', 'feu', 'eau', 'foudre', 'glace'];
+  const OUTCOMES  = {
+    feu: { true: 'twister', false: 'donut' },
+    eau: { true: 'donut',   false: 'twister' },
+  };
+
+  let showExtras = JSON.parse(localStorage.getItem('ff14mem-extras') ?? 'true');
+
+  let st = {
+    shape: null,
+    gaze1: null, gaze2: null,
+    feu: null, eau: null,
+    stillness: null, spread: null,
+    foudre: null, glace: null,
+  };
+
+  function load() {
+    try {
+      const s = localStorage.getItem('ff14mem');
+      if (s) st = Object.assign(st, JSON.parse(s));
+    } catch (_) {}
+    render();
+  }
+
+  function save() {
+    try { localStorage.setItem('ff14mem', JSON.stringify(st)); } catch (_) {}
+  }
+
+  function selectShape(shape) {
+    st.shape = st.shape === shape ? null : shape;
+    save(); render();
+  }
+
+  function select(key, val) {
+    st[key] = st[key] === val ? null : val;
+
+    // Auto-fill Stillness when Gaze2 is set and Gaze1 + Spread are already filled
+    if (key === 'gaze2' && st.gaze2 !== null && st.gaze1 !== null && st.spread !== null) {
+      st.stillness = st.gaze2 === true ? 'still' : 'move';
+    }
+
+    save(); render();
+  }
+
+  function resetAll() {
+    st = { shape:null, gaze1:null, gaze2:null, feu:null, eau:null, stillness:null, spread:null, foudre:null, glace:null };
+    save(); render();
+  }
+
+  function toggleExtras() {
+    showExtras = !showExtras;
+    localStorage.setItem('ff14mem-extras', JSON.stringify(showExtras));
+    render();
+  }
+
+  function render() {
+    document.getElementById('btn-cone').className  = 'pair-btn' + (st.shape === 'cone'  ? ' active-cone'  : '');
+    document.getElementById('btn-round').className = 'pair-btn' + (st.shape === 'round' ? ' active-round' : '');
+
+    BOOL_KEYS.forEach(key => {
+      const val = st[key];
+      document.getElementById('btn-' + key + '-true').className  = 'pair-btn' + (val === true  ? ' active-true'  : '');
+      document.getElementById('btn-' + key + '-false').className = 'pair-btn' + (val === false ? ' active-false' : '');
+
+      const badge = document.getElementById('badge-' + key);
+      if (badge) {
+        if (val === null) {
+          badge.className = 'result-badge';
+          badge.textContent = '';
+        } else {
+          const out = OUTCOMES[key][val];
+          badge.className = 'result-badge visible ' + out;
+          badge.textContent = out === 'twister' ? '🌪 Twister' : '🍩 Donut';
+        }
+      }
+    });
+
+    document.getElementById('btn-stillness-still').className = 'pair-btn' + (st.stillness === 'still' ? ' active-still' : '');
+    document.getElementById('btn-stillness-move').className  = 'pair-btn' + (st.stillness === 'move'  ? ' active-move'  : '');
+    const bStill = document.getElementById('badge-stillness');
+    if (st.stillness === null) {
+      bStill.className = 'result-badge';
+      bStill.textContent = '';
+    } else {
+      bStill.className = 'result-badge visible ' + st.stillness;
+      bStill.textContent = st.stillness === 'still' ? '🧘 Stillness' : '🏃 Movement';
+    }
+
+    document.getElementById('btn-spread-short').className = 'pair-btn' + (st.spread === 'short' ? ' active-short' : '');
+    document.getElementById('btn-spread-long').className  = 'pair-btn' + (st.spread === 'long'  ? ' active-long'  : '');
+
+    document.getElementById('row-stillness').classList.toggle('hidden', !showExtras);
+    document.getElementById('row-spread').classList.toggle('hidden', !showExtras);
+    document.getElementById('btn-vis-extras').classList.toggle('active', showExtras);
+  }
+
+  load();
+</script>
+</body>
+</html>
