@@ -47,23 +47,13 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 6px 12px 5px;
-      flex-shrink: 0;
-    }
-
-    /* P2 fixed height — calibrated to match ~1 P4 row height */
-    .phase.p2 {
-      flex: 0 0 clamp(72px, 13dvh, 108px);
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* P4 fills remaining vertical space */
-    .phase.p4 {
-      flex: 1;
       min-height: 0;
       display: flex;
       flex-direction: column;
     }
+
+    .phase.p2 { flex: 1 1 0; }
+    .phase.p4 { flex: 1 1 0; }
 
     .phase-title {
       flex-shrink: 0;
@@ -109,14 +99,9 @@
       gap: 8px;
     }
 
-    /* P2 row fills the panel like P4 rows */
     .p2 .row { flex: 1; min-height: 0; }
 
-    /* P4 rows share remaining height equally */
-    .p4 .row {
-      flex: 1;
-      min-height: 0;
-    }
+    .p4 .row { flex: 1; min-height: 0; }
 
     .label-wrap {
       flex: 1;
@@ -157,7 +142,7 @@
     .btn-group {
       display: flex;
       flex-shrink: 0;
-      gap: 5px;
+      gap: 10px;
       width: clamp(148px, 46vw, 220px);
       align-self: stretch;
     }
@@ -179,6 +164,8 @@
       min-height: 36px;
       line-height: 1;
     }
+
+    .pair-btn.symbol { font-size: clamp(3.28rem, 8dvh, 4.2rem); }
 
     /* Active states */
     .pair-btn.active-true  { background:#0d2e18; border-color:#2ecc71; color:#2ecc71; }
@@ -220,8 +207,8 @@
   <div class="row">
     <div class="label-wrap"><div class="label">Shape</div></div>
     <div class="btn-group">
-      <button class="pair-btn" id="btn-cone"  onclick="selectShape('cone')">▲ Cone</button>
-      <button class="pair-btn" id="btn-round" onclick="selectShape('round')">● Round</button>
+      <button class="pair-btn symbol" id="btn-cone"  onclick="selectShape('cone')">▲</button>
+      <button class="pair-btn symbol" id="btn-round" onclick="selectShape('round')">●</button>
     </div>
   </div>
 </div>
@@ -230,10 +217,13 @@
 <div class="phase p4">
   <div class="phase-title">
     Phase 4
-    <button class="vis-btn" id="btn-vis-extras" onclick="toggleExtras()">Still &amp; Spread</button>
+    <div style="display:flex;gap:5px">
+      <button class="vis-btn" id="btn-vis-groupe" onclick="toggleGroupe()">Groupe</button>
+      <button class="vis-btn" id="btn-vis-extras" onclick="toggleExtras()">Still &amp; Spread</button>
+    </div>
   </div>
 
-  <div class="row">
+  <div class="row" id="row-gaze1">
     <div class="label-wrap"><div class="label">👁 Gaze 1</div></div>
     <div class="btn-group">
       <button class="pair-btn" id="btn-gaze1-true"  onclick="select('gaze1', true)">True</button>
@@ -241,7 +231,7 @@
     </div>
   </div>
 
-  <div class="row">
+  <div class="row" id="row-gaze2">
     <div class="label-wrap"><div class="label">👁 Gaze 2</div></div>
     <div class="btn-group">
       <button class="pair-btn" id="btn-gaze2-true"  onclick="select('gaze2', true)">True</button>
@@ -249,7 +239,7 @@
     </div>
   </div>
 
-  <div class="row">
+  <div class="row" id="row-feu">
     <div class="label-wrap">
       <div class="label">🔥 Fire</div>
       <div id="badge-feu" class="result-badge"></div>
@@ -260,7 +250,7 @@
     </div>
   </div>
 
-  <div class="row">
+  <div class="row" id="row-eau">
     <div class="label-wrap">
       <div class="label">💧 Water</div>
       <div id="badge-eau" class="result-badge"></div>
@@ -290,7 +280,7 @@
     </div>
   </div>
 
-  <div class="row">
+  <div class="row" id="row-foudre">
     <div class="label-wrap"><div class="label">⚡ Thunder</div></div>
     <div class="btn-group">
       <button class="pair-btn" id="btn-foudre-true"  onclick="select('foudre', true)">True</button>
@@ -298,7 +288,7 @@
     </div>
   </div>
 
-  <div class="row">
+  <div class="row" id="row-glace">
     <div class="label-wrap"><div class="label">❄ Ice</div></div>
     <div class="btn-group">
       <button class="pair-btn" id="btn-glace-true"  onclick="select('glace', true)">True</button>
@@ -316,7 +306,8 @@
     eau: { true: 'donut',   false: 'twister' },
   };
 
-  let showExtras = JSON.parse(localStorage.getItem('ff14mem-extras') ?? 'true');
+  let showExtras  = JSON.parse(localStorage.getItem('ff14mem-extras')  ?? 'true');
+  let showGroupe  = JSON.parse(localStorage.getItem('ff14mem-groupe')  ?? 'true');
 
   let st = {
     shape: null,
@@ -365,6 +356,12 @@
     render();
   }
 
+  function toggleGroupe() {
+    showGroupe = !showGroupe;
+    localStorage.setItem('ff14mem-groupe', JSON.stringify(showGroupe));
+    render();
+  }
+
   function render() {
     document.getElementById('btn-cone').className  = 'pair-btn' + (st.shape === 'cone'  ? ' active-cone'  : '');
     document.getElementById('btn-round').className = 'pair-btn' + (st.shape === 'round' ? ' active-round' : '');
@@ -404,6 +401,14 @@
     document.getElementById('row-stillness').classList.toggle('hidden', !showExtras);
     document.getElementById('row-spread').classList.toggle('hidden', !showExtras);
     document.getElementById('btn-vis-extras').classList.toggle('active', showExtras);
+
+    const groupeRows = ['row-gaze1', 'row-gaze2', 'row-feu', 'row-eau', 'row-foudre', 'row-glace'];
+    groupeRows.forEach(id => document.getElementById(id).classList.toggle('hidden', !showGroupe));
+    document.getElementById('btn-vis-groupe').classList.toggle('active', showGroupe);
+
+    const p4Rows = (showGroupe ? 6 : 0) + (showExtras ? 2 : 0);
+    document.querySelector('.phase.p2').style.flexGrow = 1;
+    document.querySelector('.phase.p4').style.flexGrow = Math.max(p4Rows, 1);
   }
 
   load();
