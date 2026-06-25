@@ -165,7 +165,7 @@
       line-height: 1;
     }
 
-    .pair-btn.symbol { font-size: clamp(3.28rem, 8dvh, 4.2rem); }
+    .pair-btn.symbol { font-size: clamp(5rem, 14dvh, 7rem); }
 
     /* Active states */
     .pair-btn.active-true  { background:#0d2e18; border-color:#2ecc71; color:#2ecc71; }
@@ -363,8 +363,8 @@
   }
 
   function render() {
-    document.getElementById('btn-cone').className  = 'pair-btn' + (st.shape === 'cone'  ? ' active-cone'  : '');
-    document.getElementById('btn-round').className = 'pair-btn' + (st.shape === 'round' ? ' active-round' : '');
+    document.getElementById('btn-cone').className  = 'pair-btn symbol' + (st.shape === 'cone'  ? ' active-cone'  : '');
+    document.getElementById('btn-round').className = 'pair-btn symbol' + (st.shape === 'round' ? ' active-round' : '');
 
     BOOL_KEYS.forEach(key => {
       const val = st[key];
