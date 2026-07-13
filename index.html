@@ -220,6 +220,7 @@
     <div style="display:flex;gap:5px">
       <button class="vis-btn" id="btn-vis-groupe" onclick="toggleGroupe()">Groupe</button>
       <button class="vis-btn" id="btn-vis-extras" onclick="toggleExtras()">Still &amp; Spread</button>
+      <button class="vis-btn" id="btn-vis-release" onclick="toggleRelease()">Release</button>
     </div>
   </div>
 
@@ -306,8 +307,9 @@
     eau: { true: 'donut',   false: 'twister' },
   };
 
-  let showExtras  = JSON.parse(localStorage.getItem('ff14mem-extras')  ?? 'true');
-  let showGroupe  = JSON.parse(localStorage.getItem('ff14mem-groupe')  ?? 'true');
+  let showExtras   = JSON.parse(localStorage.getItem('ff14mem-extras')   ?? 'true');
+  let showGroupe   = JSON.parse(localStorage.getItem('ff14mem-groupe')   ?? 'true');
+  let showRelease  = JSON.parse(localStorage.getItem('ff14mem-release')  ?? 'true');
 
   let st = {
     shape: null,
@@ -362,6 +364,12 @@
     render();
   }
 
+  function toggleRelease() {
+    showRelease = !showRelease;
+    localStorage.setItem('ff14mem-release', JSON.stringify(showRelease));
+    render();
+  }
+
   function render() {
     document.getElementById('btn-cone').className  = 'pair-btn symbol' + (st.shape === 'cone'  ? ' active-cone'  : '');
     document.getElementById('btn-round').className = 'pair-btn symbol' + (st.shape === 'round' ? ' active-round' : '');
@@ -402,11 +410,15 @@
     document.getElementById('row-spread').classList.toggle('hidden', !showExtras);
     document.getElementById('btn-vis-extras').classList.toggle('active', showExtras);
 
-    const groupeRows = ['row-gaze1', 'row-gaze2', 'row-feu', 'row-eau', 'row-foudre', 'row-glace'];
+    const groupeRows = ['row-gaze1', 'row-gaze2', 'row-feu', 'row-eau'];
     groupeRows.forEach(id => document.getElementById(id).classList.toggle('hidden', !showGroupe));
     document.getElementById('btn-vis-groupe').classList.toggle('active', showGroupe);
 
-    const p4Rows = (showGroupe ? 6 : 0) + (showExtras ? 2 : 0);
+    const releaseRows = ['row-foudre', 'row-glace'];
+    releaseRows.forEach(id => document.getElementById(id).classList.toggle('hidden', !showRelease));
+    document.getElementById('btn-vis-release').classList.toggle('active', showRelease);
+
+    const p4Rows = (showGroupe ? 4 : 0) + (showExtras ? 2 : 0) + (showRelease ? 2 : 0);
     document.querySelector('.phase.p2').style.flexGrow = 1;
     document.querySelector('.phase.p4').style.flexGrow = Math.max(p4Rows, 1);
   }
